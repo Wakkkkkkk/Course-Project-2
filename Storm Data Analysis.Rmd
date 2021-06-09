@@ -1,0 +1,13 @@
+---
+title: "Storm Data Analysis"
+---
+
+#Data Processing
+Load the raw data into R
+```{r cache=TRUE}
+read.csv("repdata_data_StormData.csv.bz2") -> stormData
+```
+
+```{r}
+as.POSIXct(strptime(stormData$BGN_DATE, "%m/%d/%Y %H:%M:%S"))->stormData$BGN_DATE
+```
