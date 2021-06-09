@@ -1,6 +1,8 @@
 ---
-title: "Storm Data Analysis"
+title: "Graphs Describing the Damage From Various Extreme Weather Events"
 ---
+
+In this analysis I used storm data put out by the National Weather Service to find the extent of the impacts of extreme weather events since 2000, in terms of casualties, deaths, and property/crop damage.
 
 #Data Processing
 Load the raw data into R
@@ -24,10 +26,34 @@ Removing all dates before 2000
 stormData[stormData$BGN_DATE>as.POSIXct("2000-1-1"), 1:37] -> stormData
 ```
 
+Fixing damage values
+```{r, cache=TRUE}
+
+stormData->temps
+gsub("^$", 0,temps$CROPDMGEXP)->temps$CROPDMGEXP
+gsub("^[kK]$", 1,temps$CROPDMGEXP)->temps$CROPDMGEXP
+gsub("^[mM]$", 1000,temps$CROPDMGEXP)->temps$CROPDMGEXP
+gsub("^[bB]$", 1000000,temps$CROPDMGEXP)->temps$CROPDMGEXP
+gsub("^[?02]$", 0,temps$CROPDMGEXP)->temps$CROPDMGEXP
+
+gsub("^[?0+-23456789]$", 0,temps$PROPDMGEXP)->temps$PROPDMGEXP
+gsub("^$", 0,temps$PROPDMGEXP)->temps$PROPDMGEXP
+gsub("^[kK]$", 1,temps$PROPDMGEXP)->temps$PROPDMGEXP
+gsub("^[mM]$", 1000,temps$PROPDMGEXP)->temps$PROPDMGEXP
+gsub("^[bB]$", 1000000,temps$PROPDMGEXP)->temps$PROPDMGEXP
+gsub("^[hH]$", .1,temps$PROPDMGEXP)->temps$PROPDMGEXP
+
+as.numeric(temps$PROPDMGEXP)*temps$PROPDMG->temps$PROPDMG
+as.numeric(temps$CROPDMGEXP)*temps$CROPDMG->temps$CROPDMG
+temps$PROPDMG+temps$CROPDMG->temps$PROPDMG
+
+temps->stormData
+```
+
 Getting a General list of events with more than 50 instances (to weed out anomalies)
 ```{r, cache=TRUE}
 as.data.frame(table(stormData$EVTYPE))->stormTypes
-stormTypes[stormTypes$Freq>40, 1:2]->stormTypes
+stormTypes[stormTypes$Freq>1, 1:2]->stormTypes
 ```
 
 ```{r}
@@ -36,5 +62,45 @@ library(dplyr)
 
 523149 before this operation
 ```{r, cache=TRUE}
-stormData[contains(stormData$EVTYPE,vars=stormTypes$Var1, ), 1:37] -> cleanedDisasters
+stormData[stormData$EVTYPE%in%stormTypes$Var1, 1:37] -> sStorms
+```
+
+
+
+```{r}
+library(dplyr)
+sStorms$EVTYPE->sStorms$Type
+sStorms %>%
+    group_by(Type) %>% #Groups the data so it can be processed by summarise
+    summarise(Damage=sum(PROPDMG))->propdamage #finds the sum of emissions by year-type pair
+```
+
+```{r}
+propdamage[propdamage$Damage>2000000, 1:2] ->propdamage
+```
+
+```{r}
+library(dplyr)
+sStorms$EVTYPE->sStorms$Type
+sStorms %>%
+    group_by(Type) %>% #Groups the data so it can be processed by summarise
+    summarise(Injuries=sum(INJURIES), Fatalities=sum(FATALITIES))->Casualties #finds the sum of emissions by year-type pair
+```
+
+```{r}
+Casualties[Casualties$Injuries>315, 1:3] ->Casualties
+```
+
+```{r}
+library(lattice)
+with(propdamage, barchart(Type~Damage,propdamage,main = "Damage from Various Types of Storms from 2000 to 2011", xlab = "Damage in Thousands of Dollars"))
+```
+
+```{r}
+library(lattice)
+with(Casualties, barchart(Type~Injuries,Casualties,main = "Injuries from Various Types of Storms from 2000 to 2011", xlab = "Injuries", xlim = c(0,15500)))
+```
+```{r}
+library(lattice)
+with(Casualties, barchart(Type~Fatalities,Casualties,main = "Fatalities from Various Types of Storms from 2000 to 2011", xlab = "Injuries", xlim = c(0,1300)))
 ```
