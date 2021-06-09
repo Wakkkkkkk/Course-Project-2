@@ -4,17 +4,37 @@ title: "Storm Data Analysis"
 
 #Data Processing
 Load the raw data into R
-```{r cache=TRUE}
-read.csv("repdata_data_StormData.csv.bz2") -> stormData
+```{r, cache=TRUE}
+if(!exists("rawdata"))
+    read.csv("repdata_data_StormData.csv.bz2") -> rawdata
+```
+
+Store the raw data into a data frame which will be manipulated
+```{r, cache=TRUE}
+rawdata->stormData
 ```
 
 Getting the date
-```{r}
+```{r, cache=TRUE}
 as.POSIXct(strptime(stormData$BGN_DATE, "%m/%d/%Y %H:%M:%S"))->stormData$BGN_DATE
 ```
 
+Removing all dates before 2000
+```{r, cache=TRUE}
+stormData[stormData$BGN_DATE>as.POSIXct("2000-1-1"), 1:37] -> stormData
+```
+
 Getting a General list of events with more than 50 instances (to weed out anomalies)
-```{r}
+```{r, cache=TRUE}
 as.data.frame(table(stormData$EVTYPE))->stormTypes
-stormTypes[stormTypes$Freq>50, 1:2]->stormTypes
+stormTypes[stormTypes$Freq>40, 1:2]->stormTypes
+```
+
+```{r}
+library(dplyr)
+```
+
+523149 before this operation
+```{r, cache=TRUE}
+stormData[contains(stormData$EVTYPE,vars=stormTypes$Var1, ), 1:37] -> cleanedDisasters
 ```
